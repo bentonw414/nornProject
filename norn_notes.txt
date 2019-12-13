@@ -1,0 +1,113 @@
+
+a = s@mit.edu;
+a = a, t@mit.edu;
+a = t@mit.edu;
+
+b = s@mit.edu, a;
+a = t@mit.edu;
+
+
+Need to figure out:
+- When definition contains itself inside, needs to update based on the current
+  definition
+
+- When definition contains something else, needs to wait to update the addresses
+
+How to check whether definition contains itself inside?
+
+a = s@mit.edu;
+
+ListExpression.containsListname(String) recursively searches for the name.
+
+or, ListExpression.eval() takes in optional outer definition
+
+Could we have multiple outer definitions at once?
+- Assume we only have one. In the case where there are two, just forget about
+  the outer one.
+
+a = s@mit.edu, c;
+b = t@mit.edu;
+a = (b = a, b);
+a; = s@mit.edu, t@mit.edu
+
+a = b;
+b = s@mit.edu;
+a;
+
+yields dictionary a -> b
+
+when evaluating, given the outer definition:
+- if listname = outer def:
+    replace with the current definitoin
+- otherwise:
+    keep it "un evaluated" for now?
+
+One pass to make the dictionaries (aka for replacing edits)
+Another pass to get the addresses? (aka for replacing references)
+
+
+getAddresses:
+- look in dictionary, get what it maps to.
+
+public Map<String, ListExpression> firstPass(Map<String, ListExpression dict,
+Listname outer)
+- make instance method of ListExpression, pass in current dictionary, return
+  updated dictionary
+- call on the root of the tree with an empty dictionary. Implement for each
+  subclass by passing along the dictionary. Only sequential has to pass along
+  the updated dictionary.
+
+public Set<EmailAddress> getAddresses(List Expression e, Map<String,
+ListExpression> definitions) 
+
+- get definitions from children. combine. implemented for each instance of
+  ListExpression
+
+
+Examples:
+
+a = (b = c, d@mit.edu), (c = s@mit.edu); b;
+
+a = b, t@mit.edu;
+b = s@mit.edu;
+a;
+
+firstPass is called on Sequence(Def(a, b), Def(b, s@mit.edu), a)
+ sequentially adds to dictionary:
+1. {a: 'b, t@mit.edu'}
+2. {a: 'b, t@mit.edu', b: s@mit.edu}
+3. {a: 'b, t@mit.edu', b: s@mit.edu}
+
+then getAddresses is called on the expression and the dictionary
+1. calling on ListName a: a = map.get(a) // ListExpression
+   return a.getAddresses(dictionary);
+2. calling on Union b, t@mit.edu: calls getAddresses on left and right
+separately, passing the same dictionary to each, then union the two returned
+sets
+
+
+a = t@mit.edu;
+a = a, b, s@mit.edu; 
+b = e@mit.edu;
+a;  // t@mit, e@mit, s@mit
+
+Expression = Sequence(Def(a = t@mit), Def(a = Union(a, b, s@mit)), Def(b = e@mit), ListName(a));
+expression.firstPass( {}, null) {
+1.   dict = Address(t).firstPass(dict, null); { a: Address(t@mit)}
+2.  {a : 
+Union call of firstPass:
+- outer address a passed in
+- notice match, replace the dictionary
+- new dictionary {a: Union(Address(t), Name(b), Address(s)}
+}
+
+
+problem: Union might "deeply" contain the list definition.
+
+if listname matches outer:
+    return dict.get(outer) || Empty;
+else:
+    return listname
+
+ListExpression.
+
